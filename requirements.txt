@@ -1,3 +1,4 @@
-jupyterlab
 justpy
 papermill
+matplotlib
+gpiozero
