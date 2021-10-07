@@ -118,6 +118,9 @@ def build_monitor_panel(host_div):
     chart = jp.Matplotlib(a=monitor_div)
 
     async def renderChart(*args, **kwargs):
+        while gp.KilnDrone.kilnDrone.controller.power.value:
+            await asyncio.sleep(0.5)
+            break
         fig = gp.KilnDrone.kilnDrone.renderKilnDrone()
         chart.set_figure(fig)
         await wp.update()
