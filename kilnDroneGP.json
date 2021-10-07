@@ -1,0 +1,17 @@
+{
+    "NAME|||||groundplane": {
+        "GROUP": "NAME",
+        "SORT": "groundplane",
+        "NAME": "groundplane_1a825125-84e1-4ad4-915a-611a8b73589c"
+    },
+    "IDENTIFIER|||||_": {
+        "GROUP": "IDENTIFIER",
+        "SORT": "_",
+        "GPID": "1a825125-84e1-4ad4-915a-611a8b73589c"
+    },
+    "THING|||||KilnDrone": {
+        "GROUP": "THING",
+        "SORT": "KilnDrone",
+        "DEVICE_TYPE": "kilndrone_thing"
+    }
+}

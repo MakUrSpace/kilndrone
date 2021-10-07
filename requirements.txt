@@ -1,4 +1,5 @@
 justpy
-papermill
+ipynb
 matplotlib
 gpiozero
+deepdiff
