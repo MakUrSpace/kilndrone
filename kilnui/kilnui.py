@@ -120,6 +120,7 @@ def build_monitor_panel(host_div):
     async def renderChart(*args, **kwargs):
         fig = gp.KilnDrone.kilnDrone.renderKilnDrone()
         chart.set_figure(fig)
+        await wp.update()
 
     jp.Button(a=monitor_div, text="Refresh Chart", click=renderChart, classes=button_classes)
     jp.run_task(renderChart())
