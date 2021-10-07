@@ -225,6 +225,7 @@ def input_demo(request):
     things = [getattr(gp, m['SORT']) for m in gp.mthings]
     for gThing in things:
         build_thing_panel(panel_div, gThing)
+    jp.run_task(gp.KilnDrone.kilnDrone.asyncRun())
     return wp
 
 
