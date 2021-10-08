@@ -19,14 +19,14 @@ instructions = [
          "exit_condition": "user_input"},
         {"text": "Preheating to 400",
          "during": {"KilnDrone": {"temperature": 400}},
-         "exit_condition": {"time_passed": 1000 * 60 * 60 * 2}},
+         "exit_condition": {"time_passed": 60 * 60 * 1.4}},
         *[{"text": f"Ramping to 1500 (at {i})",
            "during": {"KilnDrone": {"temperature": i}},
-           "exit_condition": {"time_passed": 1000 * 60 * 5}
+           "exit_condition": {"time_passed": 60 * 5}
            } for i in range(415, 1505, 5)],
         {"text": "Holding at 1500",
          "during": {"KilnDrone": {"temperature": 1500}},
-         "exit_condition": {"time_passed": 1000 * 60 * 60 * 3}},
+         "exit_condition": {"time_passed": 60 * 60 * 3}},
         {"text": "Cooling!",
          "exit_condition": {"KilnDrone": {"temperature": 150}}},
         {"text": "All Done!",
