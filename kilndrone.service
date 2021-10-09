@@ -1,0 +1,12 @@
+[Unit]
+Description=KilnDrone Service
+
+[Service]
+Type=exec
+WorkingDirectory=/home/pi/kilndrone
+ExecStart=/usr/bin/python3 -u ./launch_kilnui.py
+Restart=always
+RestartSec=10s
+
+[Install]
+WantedBy=multi-user.target
