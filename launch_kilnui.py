@@ -1,3 +1,3 @@
 from kilnui import launch_server
 
-launch_server("kilnDroneGP.json")
+launch_server("/home/pi/kilndrone/kilnDroneGP.json")

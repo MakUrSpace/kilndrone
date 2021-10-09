@@ -1,9 +1,11 @@
 import json
 import asyncio
 from datetime import datetime
-from dataclasses import asdict
+from dataclasses import asdict, dataclass
 from inspect import getmembers, ismethod, signature
+import os
 
+import aiohttp
 from deepdiff import DeepDiff
 import justpy as jp
 
@@ -98,35 +100,85 @@ def build_thing_panel(host_div, thing):
 textStatusMonitor = None
 
 
+class WPState:
+    stage: int = 0
+    enteredStageAt: datetime = None
+    lastSave: datetime = None
+
+    @classmethod
+    def moveToNextStage(cls):
+        cls.stage += 1
+        cls.enteredStageAt = datetime.utcnow()
+        cls.save()
+
+    @classmethod
+    def save(cls):
+        if cls.lastSave is None or (datetime.utcnow() - cls.lastSave).total_seconds() > 300:
+            cls.lastSave = datetime.utcnow()
+            status = {
+                "stage": cls.stage,
+                "enteredStageAt": cls.enteredStageAt.isoformat(),
+                "lastSave": cls.lastSave.isoformat()
+            }
+            with open("lastState.json", "w") as f:
+                f.write(json.dumps(status, indent=2))
+
+    @classmethod
+    def restore(cls):
+        try:
+            print("Attempting to restore WP state")
+            with open("lastState.json", "r") as f:
+                lastState = json.loads(f.read())
+                lastState['enteredStageAt'] = datetime.fromisoformat(lastState['enteredStageAt'])
+                lastState['lastSave'] = datetime.fromisoformat(lastState['lastSave'])
+            if (datetime.utcnow() - lastState['lastSave']).total_seconds() < 300:
+                print("Restoring recovered state")
+                cls.stage = lastState['stage']
+                cls.enteredStageAt = lastState['enteredStageAt']
+                cls.lastSave = lastState['lastSave']
+            else:
+                raise Exception("Last state too old!!!!")
+        except Exception as e:
+            print(f"EGADS!!! An exception with our memory, Brain! {e}")
+            cls.stage = 0
+            cls.enteredStageAt = datetime.utcnow()
+            cls.lastSave = None
+
+
 async def updateTextStatusMonitor():
+    print("Starting Text Status Monitor")
     while True:
-        await asyncio.sleep(2)
+        await asyncio.sleep(5)
+        print("Monitoring")
+        WPState.save()
         if textStatusMonitor is not None:
-            textStatusMonitor.add_component(
-                jp.Div(a=textStatusMonitor, classes=label_classes + " border-2", text=f"{gp.KilnDrone.kilnDrone.controller.characterizeKiln()}"),
-                position=0
-            )
+            status = gp.KilnDrone.kilnDrone.controller.characterizeKiln()
+            textStatusMonitor.add_component(jp.Div(classes=label_classes + " border-2", text=f"{status}"), position=0)
             jp.run_task(wp.update())
+    raise Exception("This shouldn't be reachable...")
+
+
+chart = None
+
+
+async def renderChart(*args, **kwargs):
+    while gp.KilnDrone.kilnDrone.controller.power.value:
+        await asyncio.sleep(0.5)
+        break
+    fig = gp.KilnDrone.kilnDrone.renderKilnDrone()
+    if chart is not None:
+        chart.set_figure(fig)
+    await wp.update()
 
 
 def build_monitor_panel(host_div):
     monitor_div = jp.Div(a=host_div, classes="border-2 justify-center flex flex-wrap -mx-3")
 
-    global textStatusMonitor
+    global textStatusMonitor, chart
     textStatusMonitor = jp.Div(a=monitor_div, classes="border-2 flex flex-wrap overflow-auto h-64 justify-center")
-
     chart = jp.Matplotlib(a=monitor_div)
 
-    async def renderChart(*args, **kwargs):
-        while gp.KilnDrone.kilnDrone.controller.power.value:
-            await asyncio.sleep(0.5)
-            break
-        fig = gp.KilnDrone.kilnDrone.renderKilnDrone()
-        chart.set_figure(fig)
-        await wp.update()
-
     jp.Button(a=monitor_div, text="Refresh Chart", click=renderChart, classes=button_classes)
-    jp.run_task(renderChart())
 
 
 def atTargetState(targetState, currentState):
@@ -136,13 +188,17 @@ def atTargetState(targetState, currentState):
 
 
 async def condition_watcher(conditions):
+    print("Starting Stage Exit Condition Watcher")
     while True:
         met = True
         for comp, condition in conditions.items():
+            print("Checking Stage Exit Conditions...")
             if comp == "time_passed":
-                timePassed = (datetime.utcnow() - wp.enteredStageAt).total_seconds()
+                timePassed = (datetime.utcnow() - WPState.enteredStageAt).total_seconds()
                 if timePassed < condition:
-                    print(f"{timePassed} seconds of {condition} of passed")
+                    timeMessage = f"{timePassed} seconds of {condition} of passed"
+                    instr_interface.dynDiv.text = timeMessage
+                    print(timeMessage)
                     met = False
                     break
                 else:
@@ -153,7 +209,9 @@ async def condition_watcher(conditions):
             compCurrentState = comp.state()['state']
             if not atTargetState(condition, compCurrentState):
                 met = False
-                print("Conditions not met")
+                conditionMsg = f"{comp} condition: ({condition}) not met"
+                instr_interface.dynDiv.text = conditionMsg
+                print(conditionMsg)
                 break
         if met:
             print("CONDITIONS MET!")
@@ -164,20 +222,19 @@ async def condition_watcher(conditions):
 
 async def exit_instruction():
     # Perform exit tasks
-    print(f"Performing exit instructions for {wp.stage}")
-    instruction = instructions[wp.stage]
-    print(f"{wp.stage} instruction: {instruction.text}")
+    print(f"Performing exit instructions for {WPState.stage}")
+    instruction = instructions[WPState.stage]
+    print(f"{WPState.stage} instruction: {instruction.text}")
     if instruction.on_exit is not None:
         for comp, condition in instruction.on_exit.items():
             print(f"Setting {comp} to {condition}")
             if comp == "stage":
-                wp.stage = condition - 1
+                WPState.stage = condition - 1
             else:
                 getattr(gp, comp).request_state(condition)
                 print(f"{getattr(gp, comp)}")
                 print(gp.right_door_latch.state())
-    wp.stage += 1
-    wp.enteredStageAt = datetime.utcnow()
+    WPState.moveToNextStage()
     await build_instr_interface()
 
 
@@ -188,12 +245,12 @@ def box_checked(self, msg):
 async def build_instr_interface():
     global instr_interface
     global wp
-    print(f"WP at stage {wp.stage}")
+    print(f"WP at stage {WPState.stage}")
     if instr_interface is not None:
         wp.instrContainer.remove_component(instr_interface)
         instr_interface.delete()
 
-    instruction = instructions[wp.stage]
+    instruction = instructions[WPState.stage]
 
     if instruction.during is not None:
         print(f"Setting during conditions: {instruction.during}")
@@ -202,6 +259,7 @@ async def build_instr_interface():
             getattr(gp, comp).request_state(condition)
 
     instr_interface = jp.Div(a=wp.instrContainer, classes="container justify-center border-2")
+    instr_interface.dynDiv = jp.Div(a=wp.instrContainer, classes="justify-center border-2")
     jp.Div(a=instr_interface, classes="text-2xl text-center p-2", text=instruction.text)
     if instruction.exit_condition == "user_input":
         print("Configuring for user input")
@@ -215,25 +273,67 @@ async def build_instr_interface():
         jp.run_task(condition_watcher(instruction.exit_condition))
 
 
-def input_demo(request):
+def build_page(gp_cfg_path):
     global wp
+    global gp
+
+    gp = groundplane(gp_cfg_path)
+
     wp = jp.WebPage()
-    wp.stage = 0
+
     jp.Div(a=wp, classes="text-6xl text-center p-2", text="KilnDrone Administration Console")
     panel_div = jp.Div(a=wp, classes="border-4")
 
     wp.instrContainer = jp.Div(a=panel_div, classes="border-2 flex justify-center")
-    jp.run_task(build_instr_interface())
 
     build_monitor_panel(panel_div)
     things = [getattr(gp, m['SORT']) for m in gp.mthings]
     for gThing in things:
         build_thing_panel(panel_div, gThing)
-    jp.run_task(gp.KilnDrone.kilnDrone.asyncRun())
+
+    WPState.restore()
+
+
+async def startThings():
+    for startUpFunc in [ 
+            gp.KilnDrone.kilnDrone.asyncRun,
+            updateTextStatusMonitor,
+            build_instr_interface,
+            renderChart,
+            checkHealth]:
+        jp.run_task(startUpFunc())
+
+
+async def checkHealth():
+    await asyncio.sleep(15)
+    count = 0
+    sleepTime = 5
+    limit = 600  # 5 * 180 = 900 == 15 minutes between deaths
+    try:
+        while True:
+            print("Checking health")
+            count += 1
+            if count > limit:
+                raise Exception("Been alive way too long!")
+
+            async with aiohttp.ClientSession() as session:
+                async with session.get("http://localhost:8000") as resp:
+                    if resp.status != 200:
+                        raise Exception("Server done borked")
+                    else:
+                        print(f"Server looks healthy. Killing in {limit - count} cycles")
+
+            await asyncio.sleep(sleepTime)
+    except Exception as e:
+        print(f"Killing Self because of {e}!")
+        gp.KilnDrone.kilnDrone.controller.power.off()
+        os.kill(os.getpid(), 9)
+
+
+async def handle_request(request):
     return wp
 
 
 def launch_server(gp_cfg_path):
-    global gp
-    gp = groundplane(gp_cfg_path)
-    jp.justpy(input_demo, host='0.0.0.0', startup=lambda: jp.run_task(updateTextStatusMonitor()))
+    build_page(gp_cfg_path)
+    jp.justpy(handle_request, host='0.0.0.0', startup=startThings)
