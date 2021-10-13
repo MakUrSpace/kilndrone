@@ -1,7 +1,6 @@
 import json
 import asyncio
 from datetime import datetime
-from dataclasses import asdict, dataclass
 from inspect import getmembers, ismethod, signature
 import os
 
@@ -10,10 +9,8 @@ from deepdiff import DeepDiff
 import justpy as jp
 
 from groundplane import groundplane
-from groundplane.things import thing
 
-from kilndrone import KilnDrone
-from kilnui.instructions import instructions
+from kilnui import instructions
 
 
 gp = None
@@ -24,32 +21,6 @@ label_classes = "m-2 p-2 w-128 text-right"
 button_classes = "w-16 bg-blue-500 hover:bg-blue-700 text-white font-bold rounded-full"
 input_classes = "m-2 bg-gray-200 border-2 border-gray-200 rounded w-64 py-2 px-4 text-gray-700 focus:outline-none focus:bg-white focus:border-purple-500"
 p_classes = 'm-2 p-2 h-32 text-xl border-2'
-
-
-class kilndrone_thing(thing):
-    def __init__(self, SORT, DEVICE_TYPE):
-        super().__init__(SORT, DEVICE_TYPE)
-
-        self.kilnDrone = KilnDrone()
-        self.kilnDrone.setTargetTemperature(0)
-        # self.kilnDrone.run()
-
-    def state(self):
-        cyclesAgo = 10
-        return {"state": json.dumps(asdict(self.kilnDrone.controller.characterizeKiln())),
-                "pastStates": json.dumps([asdict(s) for s in self.kilnDrone.states[:cyclesAgo]]),
-                "TIMESTAMP": datetime.utcnow().isoformat()}
-
-    def request_state(self, requested_state):
-        print(requested_state)
-        requestedTemperature = requested_state.get("temperature", None)
-        self.request_temperature(requestedTemperature)
-
-    def request_temperature(self, targetTemperature):
-        self.kilnDrone.setTargetTemperature(targetTemperature)
-
-    def at_or_above_temperature(self):
-        return self.kilnDrone.controller.temperature > self.kilnDrone.controller.targetTemp
 
 
 def thing_administration_invocation(self, msg):
