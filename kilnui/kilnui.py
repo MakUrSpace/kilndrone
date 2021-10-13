@@ -35,7 +35,9 @@ class kilndrone_thing(thing):
         # self.kilnDrone.run()
 
     def state(self):
+        cyclesAgo = 10
         return {"state": json.dumps(asdict(self.kilnDrone.controller.characterizeKiln())),
+                "pastStates": json.dumps([asdict(s) for s in self.kilnDrone.states[:cyclesAgo]]),
                 "TIMESTAMP": datetime.utcnow().isoformat()}
 
     def request_state(self, requested_state):
@@ -131,7 +133,7 @@ class WPState:
                 lastState = json.loads(f.read())
                 lastState['enteredStageAt'] = datetime.fromisoformat(lastState['enteredStageAt'])
                 lastState['lastSave'] = datetime.fromisoformat(lastState['lastSave'])
-            if (datetime.utcnow() - lastState['lastSave']).total_seconds() < 300:
+            if (datetime.utcnow() - lastState['lastSave']).total_seconds() < 600:
                 print("Restoring recovered state")
                 cls.stage = lastState['stage']
                 cls.enteredStageAt = lastState['enteredStageAt']
@@ -151,11 +153,16 @@ async def updateTextStatusMonitor():
         await asyncio.sleep(5)
         print("Monitoring")
         WPState.save()
+        gp.upload_state()
         if textStatusMonitor is not None:
             status = gp.KilnDrone.kilnDrone.controller.characterizeKiln()
-            textStatusMonitor.add_component(jp.Div(classes=label_classes + " border-2", text=f"{status}"), position=0)
+            statusComment = jp.Div(classes=label_classes + " border-2", text=f"{status}")
+            textStatusMonitor.add_component(statusComment, position=0)
             jp.run_task(wp.update())
     raise Exception("This shouldn't be reachable...")
+
+
+updateTextStatusMonitor.statusComment = None
 
 
 chart = None
@@ -196,7 +203,7 @@ async def condition_watcher(conditions):
             if comp == "time_passed":
                 timePassed = (datetime.utcnow() - WPState.enteredStageAt).total_seconds()
                 if timePassed < condition:
-                    timeMessage = f"{timePassed} seconds of {condition} of passed"
+                    timeMessage = f"{timePassed} of {condition} seconds of passed"
                     instr_interface.dynDiv.text = timeMessage
                     print(timeMessage)
                     met = False
@@ -248,6 +255,8 @@ async def build_instr_interface():
     print(f"WP at stage {WPState.stage}")
     if instr_interface is not None:
         wp.instrContainer.remove_component(instr_interface)
+        wp.instrContainer.remove_component(instr_interface.dynDiv)
+        instr_interface.dynDiv.delete()
         instr_interface.delete()
 
     instruction = instructions[WPState.stage]

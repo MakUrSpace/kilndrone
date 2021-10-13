@@ -23,7 +23,7 @@ instructions = [
         *[{"text": f"Ramping to 1500 (at {i})",
           "during": {"KilnDrone": {"temperature": i}},
            "exit_condition": {"time_passed": 60}
-          } for i in range(400, 1505, (1100 / (60 * 5))],
+          } for i in range(400, 1505, int((1100 / (60 * 5)) + 1))],
         {"text": "Holding at 1500",
          "during": {"KilnDrone": {"temperature": 1500}},
          "exit_condition": {"time_passed": 60 * 60 * 3}},
