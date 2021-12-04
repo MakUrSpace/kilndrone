@@ -288,7 +288,7 @@ async def checkHealth():
     await asyncio.sleep(15)
     count = 0
     sleepTime = 5
-    limit = 600  # 5 * 180 = 900 == 15 minutes between deaths
+    limit = 900  # 5 * 180 = 900 == 15 minutes between deaths
     try:
         while True:
             print("Checking health")
