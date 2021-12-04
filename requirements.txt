@@ -1,5 +1,6 @@
 justpy
 ipynb
+pandas
 matplotlib
 gpiozero
 deepdiff
