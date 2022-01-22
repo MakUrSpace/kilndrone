@@ -67,4 +67,4 @@ instructionSets = {
 }
 
 
-instructions = instructionSets["pyrex"]
+instructions = instructionSets["ceramic"]
