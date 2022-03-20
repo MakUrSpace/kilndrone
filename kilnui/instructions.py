@@ -26,7 +26,7 @@ instructionSets = {
               } for i in range(400, 1505, int((1100 / (60 * 5)) + 1))],
             {"text": "Holding at 1500",
              "during": {"KilnDrone": {"temperature": 1500}},
-             "exit_condition": {"time_passed": 60 * 60 * 3}},
+             "exit_condition": {"time_passed": 60 * 60 * 6}},
             {"text": "Cooling!",
              "exit_condition": {"KilnDrone": {"temperature": 150}}},
             {"text": "All Done!",
@@ -67,4 +67,4 @@ instructionSets = {
 }
 
 
-instructions = instructionSets["ceramic"]
+instructions = instructionSets["pyrex"]

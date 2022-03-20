@@ -80,7 +80,7 @@ class WPState:
 
     @classmethod
     def moveToNextStage(cls):
-        cls.stage += 1
+        cls.stage = 0 if cls.stage + 1 >= len(instructions) else cls.stage + 1
         cls.enteredStageAt = datetime.utcnow()
         cls.save()
 
