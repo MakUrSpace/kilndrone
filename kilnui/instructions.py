@@ -66,34 +66,18 @@ instructionSets = {
              "exit_condition": "user_input"}
         ]
     ],
-    "aluminum": [KilnUIInstruction(**instr) for instr in
-        [
-            {"text": "Starting Up Aluminum!",
-             "exit_condition": "user_input"},
-            {"text": "Preheating to 400 for 0.5 hours",
-             "during": {"KilnDrone": {"temperature": 400}},
-             "exit_condition": {"time_passed": 60 * 30}},
-            *[{"text": f"Ramping to 1800 over 2 hours (at {i})",
-              "during": {"KilnDrone": {"temperature": i}},
-               "exit_condition": {"time_passed": 60}
-              } for i in range(400, 1800, int((1200 / (60 * 2)) + 1))],
-            {"text": "Holding at 1800*F for 3 hours",
-             "during": {"KilnDrone": {"temperature": 1800}},
-             "exit_condition": {"time_passed": 60 * 60 * 3}},
-            {"text": "Cooling!",
-             "exit_condition": {"KilnDrone": {"temperature": 150}}},
-            {"text": "All Done!",
-             "exit_condition": "user_input"}
-        ]
-    ],
     "plaBurn": [KilnUIInstruction(**instr) for instr in
         [
             {"text": "Starting Up PLA Burn!",
              "exit_condition": "user_input"},
             {"text": "Preheating to 400 for 2 hours",
              "during": {"KilnDrone": {"temperature": 400}},
-             "exit_condition": {"time_passed": 60 * 60 * 2}},
+             "exit_condition": {"time_passed": 2 * 60 * 60}},
+            {"text": "Heating to 1000 for 4 hours",
+             "during": {"KilnDrone": {"temperature": 1000}},
+             "exit_condition": {"time_passed": 60 * 60 * 4}},
             {"text": "Cooling!",
+             "during": {"KilnDrone": {"temperature": 0}},
              "exit_condition": {"KilnDrone": {"temperature": 150}}},
             {"text": "All Done!",
              "exit_condition": "user_input"}
